@@ -1,3 +1,5 @@
+use safety_tool_macro::*;
+
 use crate::any::type_name;
 use crate::mem::ManuallyDrop;
 use crate::{fmt, intrinsics, ptr, slice};
@@ -611,7 +613,7 @@ impl<T> MaybeUninit<T> {
     #[inline(always)]
     #[rustc_diagnostic_item = "assume_init"]
     #[track_caller]
-    #[safety::precond::Init(self, T, 1)]
+    #[Precond_Init(self, T, 1)]
     pub const unsafe fn assume_init(self) -> T {
         // SAFETY: the caller must guarantee that `self` is initialized.
         // This also means that `self` must be a `value` variant.

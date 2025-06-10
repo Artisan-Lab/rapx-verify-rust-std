@@ -6,6 +6,8 @@
 
 #![stable(feature = "rust1", since = "1.0.0")]
 
+use safety_tool_macro::*;
+
 use crate::cmp::Ordering::{self, Equal, Greater, Less};
 use crate::intrinsics::{exact_div, unchecked_sub};
 use crate::mem::{self, MaybeUninit, SizedTypeProperties};
@@ -384,7 +386,9 @@ impl<T> [T] {
     #[stable(feature = "slice_first_last_chunk", since = "1.77.0")]
     #[rustc_const_stable(feature = "slice_first_last_chunk", since = "1.77.0")]
     pub const fn split_first_chunk<const N: usize>(&self) -> Option<(&[T; N], &[T])> {
-        let Some((first, tail)) = self.split_at_checked(N) else { return None };
+        let Some((first, tail)) = self.split_at_checked(N) else {
+            return None;
+        };
 
         // SAFETY: We explicitly check for the correct number of elements,
         //   and do not let the references outlive the slice.
@@ -416,7 +420,9 @@ impl<T> [T] {
     pub const fn split_first_chunk_mut<const N: usize>(
         &mut self,
     ) -> Option<(&mut [T; N], &mut [T])> {
-        let Some((first, tail)) = self.split_at_mut_checked(N) else { return None };
+        let Some((first, tail)) = self.split_at_mut_checked(N) else {
+            return None;
+        };
 
         // SAFETY: We explicitly check for the correct number of elements,
         //   do not let the reference outlive the slice,
@@ -444,7 +450,9 @@ impl<T> [T] {
     #[stable(feature = "slice_first_last_chunk", since = "1.77.0")]
     #[rustc_const_stable(feature = "slice_first_last_chunk", since = "1.77.0")]
     pub const fn split_last_chunk<const N: usize>(&self) -> Option<(&[T], &[T; N])> {
-        let Some(index) = self.len().checked_sub(N) else { return None };
+        let Some(index) = self.len().checked_sub(N) else {
+            return None;
+        };
         let (init, last) = self.split_at(index);
 
         // SAFETY: We explicitly check for the correct number of elements,
@@ -477,7 +485,9 @@ impl<T> [T] {
     pub const fn split_last_chunk_mut<const N: usize>(
         &mut self,
     ) -> Option<(&mut [T], &mut [T; N])> {
-        let Some(index) = self.len().checked_sub(N) else { return None };
+        let Some(index) = self.len().checked_sub(N) else {
+            return None;
+        };
         let (init, last) = self.split_at_mut(index);
 
         // SAFETY: We explicitly check for the correct number of elements,
@@ -507,7 +517,9 @@ impl<T> [T] {
     #[rustc_const_stable(feature = "const_slice_last_chunk", since = "1.80.0")]
     pub const fn last_chunk<const N: usize>(&self) -> Option<&[T; N]> {
         // FIXME(const-hack): Without const traits, we need this instead of `get`.
-        let Some(index) = self.len().checked_sub(N) else { return None };
+        let Some(index) = self.len().checked_sub(N) else {
+            return None;
+        };
         let (_, last) = self.split_at(index);
 
         // SAFETY: We explicitly check for the correct number of elements,
@@ -537,7 +549,9 @@ impl<T> [T] {
     #[rustc_const_stable(feature = "const_slice_first_last_chunk", since = "1.83.0")]
     pub const fn last_chunk_mut<const N: usize>(&mut self) -> Option<&mut [T; N]> {
         // FIXME(const-hack): Without const traits, we need this instead of `get`.
-        let Some(index) = self.len().checked_sub(N) else { return None };
+        let Some(index) = self.len().checked_sub(N) else {
+            return None;
+        };
         let (_, last) = self.split_at_mut(index);
 
         // SAFETY: We explicitly check for the correct number of elements,
@@ -632,8 +646,9 @@ impl<T> [T] {
     #[inline]
     #[must_use]
     #[track_caller]
-    #[safety::precond::InBound(self, T, I)]
-    #[safety::precond::Allocated(self, T, self.len(), _)]
+    #[Precond_InBound(self, T, I)]
+    #[Precond_Allocated(self, T, self.len(), _)]
+    // #[Memo(Property_slice_get_unchecked)] // 👈 It'll fail if caller doesn't tag this.
     pub unsafe fn get_unchecked<I>(&self, index: I) -> &I::Output
     where
         I: SliceIndex<Self>,
@@ -678,8 +693,8 @@ impl<T> [T] {
     #[inline]
     #[must_use]
     #[track_caller]
-    #[safety::precond::InBound(self, T, I)]
-    #[safety::precond::Allocated(self, T, self.len(), _)]
+    #[Precond_InBound(self, T, I)]
+    #[Precond_Allocated(self, T, self.len(), _)]
     pub unsafe fn get_unchecked_mut<I>(&mut self, index: I) -> &mut I::Output
     where
         I: SliceIndex<Self>,
@@ -942,8 +957,8 @@ impl<T> [T] {
     /// [undefined behavior]: https://doc.rust-lang.org/reference/behavior-considered-undefined.html
     #[unstable(feature = "slice_swap_unchecked", issue = "88539")]
     #[track_caller]
-    #[safety::precond::InBound(self, T, a)]
-    #[safety::precond::InBound(self, T, b)]
+    #[Precond_InBound(self, T, a)]
+    #[Precond_InBound(self, T, b)]
     pub const unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
         assert_unsafe_precondition!(
             check_library_ub,
@@ -1317,8 +1332,8 @@ impl<T> [T] {
     #[inline]
     #[must_use]
     #[track_caller]
-    #[safety::precond::ValidNum(N, !=0)]
-    #[safety::precond::ValidNum(self.len()%N, ==0)]
+    #[Precond_ValidNum(N, N != 0)]
+    #[Precond_ValidNum(self.len()%N, self.len()%N ==0)]
     pub const unsafe fn as_chunks_unchecked<const N: usize>(&self) -> &[[T; N]] {
         assert_unsafe_precondition!(
             check_language_ub,
@@ -1515,8 +1530,8 @@ impl<T> [T] {
     #[inline]
     #[must_use]
     #[track_caller]
-    #[safety::precond::ValidNum(N, !=0)]
-    #[safety::precond::ValidNum(self.len()%N, ==0)]
+    #[Precond_ValidNum(N, N != 0)]
+    #[Precond_ValidNum(self.len()%N, self.len()%N==0)]
     pub const unsafe fn as_chunks_unchecked_mut<const N: usize>(&mut self) -> &mut [[T; N]] {
         assert_unsafe_precondition!(
             check_language_ub,
@@ -2077,7 +2092,7 @@ impl<T> [T] {
     #[inline]
     #[must_use]
     #[track_caller]
-    #[safety::precond::InBound(self, T, mid)]
+    #[Precond_InBound(self, T, mid)]
     pub const unsafe fn split_at_unchecked(&self, mid: usize) -> (&[T], &[T]) {
         // FIXME(const-hack): the const function `from_raw_parts` is used to make this
         // function const; previously the implementation used
@@ -2132,7 +2147,7 @@ impl<T> [T] {
     #[inline]
     #[must_use]
     #[track_caller]
-    #[safety::precond::InBound(self, T, mid)]
+    #[Precond_InBound(self, T, mid)]
     pub const unsafe fn split_at_mut_unchecked(&mut self, mid: usize) -> (&mut [T], &mut [T]) {
         let len = self.len();
         let ptr = self.as_mut_ptr();
@@ -4017,7 +4032,7 @@ impl<T> [T] {
     /// ```
     #[stable(feature = "slice_align_to", since = "1.30.0")]
     #[must_use]
-    #[safety::precond::Typed(res.1, U)]
+    #[Precond_Typed(res.1, U)]
     pub unsafe fn align_to<U>(&self) -> (&[T], &[U], &[T]) {
         // Note that most of this function will be constant-evaluated,
         if U::IS_ZST || T::IS_ZST {
@@ -4083,7 +4098,7 @@ impl<T> [T] {
     /// ```
     #[stable(feature = "slice_align_to", since = "1.30.0")]
     #[must_use]
-    #[safety::precond::Typed(res.1, U)]
+    #[Precond_Typed(res.1, U)]
     pub unsafe fn align_to_mut<U>(&mut self) -> (&mut [T], &mut [U], &mut [T]) {
         // Note that most of this function will be constant-evaluated,
         if U::IS_ZST || T::IS_ZST {
@@ -4534,7 +4549,9 @@ impl<T> [T] {
     #[rustc_const_unstable(feature = "const_split_off_first_last", issue = "138539")]
     pub const fn split_off_first<'a>(self: &mut &'a Self) -> Option<&'a T> {
         // FIXME(const-hack): Use `?` when available in const instead of `let-else`.
-        let Some((first, rem)) = self.split_first() else { return None };
+        let Some((first, rem)) = self.split_first() else {
+            return None;
+        };
         *self = rem;
         Some(first)
     }
@@ -4560,7 +4577,9 @@ impl<T> [T] {
     pub const fn split_off_first_mut<'a>(self: &mut &'a mut Self) -> Option<&'a mut T> {
         // FIXME(const-hack): Use `mem::take` and `?` when available in const.
         // Original: `mem::take(self).split_first_mut()?`
-        let Some((first, rem)) = mem::replace(self, &mut []).split_first_mut() else { return None };
+        let Some((first, rem)) = mem::replace(self, &mut []).split_first_mut() else {
+            return None;
+        };
         *self = rem;
         Some(first)
     }
@@ -4584,7 +4603,9 @@ impl<T> [T] {
     #[rustc_const_unstable(feature = "const_split_off_first_last", issue = "138539")]
     pub const fn split_off_last<'a>(self: &mut &'a Self) -> Option<&'a T> {
         // FIXME(const-hack): Use `?` when available in const instead of `let-else`.
-        let Some((last, rem)) = self.split_last() else { return None };
+        let Some((last, rem)) = self.split_last() else {
+            return None;
+        };
         *self = rem;
         Some(last)
     }
@@ -4610,7 +4631,9 @@ impl<T> [T] {
     pub const fn split_off_last_mut<'a>(self: &mut &'a mut Self) -> Option<&'a mut T> {
         // FIXME(const-hack): Use `mem::take` and `?` when available in const.
         // Original: `mem::take(self).split_last_mut()?`
-        let Some((last, rem)) = mem::replace(self, &mut []).split_last_mut() else { return None };
+        let Some((last, rem)) = mem::replace(self, &mut []).split_last_mut() else {
+            return None;
+        };
         *self = rem;
         Some(last)
     }
@@ -4664,8 +4687,8 @@ impl<T> [T] {
     #[stable(feature = "get_many_mut", since = "1.86.0")]
     #[inline]
     #[track_caller]
-    #[safety::precond::NonOverlap(self.add(I.start), self.add(I.end), T, I.end - I.start)]
-    #[safety::precond::InBound(self, T, I.end)]
+    #[Precond_NotOverlap(self.add(I.start), self.add(I.end), T, I.end - I.start)]
+    #[Precond_InBound(self, T, I.end)]
     pub unsafe fn get_disjoint_unchecked_mut<I, const N: usize>(
         &mut self,
         indices: [I; N],

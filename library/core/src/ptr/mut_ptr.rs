@@ -1,4 +1,5 @@
 use safety::{ensures, requires};
+use safety_tool_macro::*;
 
 use super::*;
 use crate::cmp::Ordering::{Equal, Greater, Less};
@@ -1055,8 +1056,8 @@ impl<T: ?Sized> *mut T {
     // Otherwise, for non-unit types, ensure that `self` and `result` point to the same allocated object,
     // verifying that the result remains within the same allocation as `self`.
     #[ensures(|result| (core::mem::size_of::<T>() == 0) || core::ub_checks::same_allocation(self as *const T, *result as *const T))]
-    #[safety::precond::InBound(self, T, count)]
-    #[safety::precond::ValidNum(size_of(T)*count, <=isize::MAX)]
+    #[Precond_InBound(self, T, count)]
+    #[Precond_ValidNum(size_of(T)*count, size_of(T)*count<=isize::MAX)]
     pub const unsafe fn add(self, count: usize) -> Self
     where
         T: Sized,
@@ -1196,7 +1197,7 @@ impl<T: ?Sized> *mut T {
     // Otherwise, for non-unit types, ensure that `self` and `result` point to the same allocated object,
     // verifying that the result remains within the same allocation as `self`.
     #[ensures(|result| (core::mem::size_of::<T>() == 0) || core::ub_checks::same_allocation(self as *const T, *result as *const T))]
-    #[safety::precond::InBound(self, T, -count)]
+    #[Precond_InBound(self, T, -count)]
     pub const unsafe fn sub(self, count: usize) -> Self
     where
         T: Sized,

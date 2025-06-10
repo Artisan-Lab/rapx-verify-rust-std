@@ -56,3 +56,6 @@ goto-transcoder
 # already existing elements were commented out
 
 #/target
+
+# tag-std / rapx's cache
+data.sqlite3

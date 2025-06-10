@@ -396,6 +396,8 @@
 // There are many unsafe functions taking pointers that don't dereference them.
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
+use safety_tool_macro::*;
+
 use crate::cmp::Ordering;
 use crate::intrinsics::const_eval_select;
 #[cfg(kani)]
@@ -520,14 +522,10 @@ mod mut_ptr;
 #[inline(always)]
 #[cfg_attr(miri, track_caller)] // even without panics, this helps for Miri backtraces
 #[rustc_diagnostic_item = "ptr_copy_nonoverlapping"]
-#[safety::precond::ValidPtr(src, T, count)]
-#[safety::precond::Align(src, T)]
-#[safety::precond::NonVolatile(src, T, count)]
-#[safety::precond::ValidPtr(dst, T, count)]
-#[safety::precond::Align(dst, T)]
-#[safety::precond::NonVolatile(src, T, count)]
-#[safety::precond::NonOverlap(src, dst, T, count)]
-#[safety::option::Trait(T, Copy)]
+// #[Precond_Align(dst, T)]
+#[Precond_NotVolatile(src, T, count)]
+#[Precond_NotOverlap(src, dst, T, count)]
+// #[rapx_::option::Trait(T, Copy)]
 pub const unsafe fn copy_nonoverlapping<T>(src: *const T, dst: *mut T, count: usize) {
     ub_checks::assert_unsafe_precondition!(
         check_language_ub,
@@ -625,13 +623,13 @@ pub const unsafe fn copy_nonoverlapping<T>(src: *const T, dst: *mut T, count: us
 #[inline(always)]
 #[cfg_attr(miri, track_caller)] // even without panics, this helps for Miri backtraces
 #[rustc_diagnostic_item = "ptr_copy"]
-#[safety::precond::ValidPtr(src, T, count)]
-#[safety::precond::Align(src, T)]
-#[safety::precond::NonVolatile(src, T, count)]
-#[safety::precond::ValidPtr(dst, T, count)]
-#[safety::precond::Align(dst, T)]
-#[safety::precond::NonVolatile(src, T, count)]
-#[safety::option::Trait(T, Copy)]
+// #[Precond_ValidPtr(src, T, count)]
+#[Precond_Align(src, T)]
+// #[Precond_NonVolatile(src, T, count)]
+// #[Precond_ValidPtr(dst, T, count)]
+#[Precond_Align(dst, T)]
+// #[Precond_NonVolatile(src, T, count)]
+// #[rapx_::option::Trait(T, Copy)]
 pub const unsafe fn copy<T>(src: *const T, dst: *mut T, count: usize) {
     // SAFETY: the safety contract for `copy` must be upheld by the caller.
     unsafe {
@@ -1299,12 +1297,9 @@ pub const fn slice_from_raw_parts_mut<T>(data: *mut T, len: usize) -> *mut [T] {
 #[stable(feature = "rust1", since = "1.0.0")]
 #[rustc_const_stable(feature = "const_swap", since = "1.85.0")]
 #[rustc_diagnostic_item = "ptr_swap"]
-#[safety::precond::ValidPtr(x, T, count)]
-#[safety::precond::Align(x, T)]
-#[safety::precond::NonVolatile(x, T, count)]
-#[safety::precond::ValidPtr(y, T, count)]
-#[safety::precond::Align(y, T)]
-#[safety::precond::NonVolatile(y, T, count)]
+// #[Precond_ValidPtr(y, T, count)]
+#[Precond_Align(y, T)]
+#[Precond_NotVolatile(y, T, count)]
 pub const unsafe fn swap<T>(x: *mut T, y: *mut T) {
     // Give ourselves some scratch space to work with.
     // We do not have to worry about drops: `MaybeUninit` does nothing when dropped.
@@ -1403,13 +1398,13 @@ pub const unsafe fn swap<T>(x: *mut T, y: *mut T) {
 #[rustc_diagnostic_item = "ptr_swap_nonoverlapping"]
 #[rustc_allow_const_fn_unstable(const_eval_select)] // both implementations behave the same
 #[track_caller]
-#[safety::precond::ValidPtr(x, T, count)]
-#[safety::precond::Align(x, T)]
-#[safety::precond::NonVolatile(x, T, count)]
-#[safety::precond::ValidPtr(y, T, count)]
-#[safety::precond::Align(y, T)]
-#[safety::precond::NonVolatile(y, T, count)]
-#[safety::precond::NonOverlap(x, y, T, count)]
+// #[Precond_ValidPtr(x, T, count)]
+// #[Precond_Align(x, T)]
+// #[Precond_NonVolatile(x, T, count)]
+// #[Precond_ValidPtr(y, T, count)]
+#[Precond_Align(y, T)]
+#[Precond_NotVolatile(y, T, count)]
+#[Precond_NotOverlap(x, y, T, count)]
 pub const unsafe fn swap_nonoverlapping<T>(x: *mut T, y: *mut T, count: usize) {
     ub_checks::assert_unsafe_precondition!(
         check_library_ub,
@@ -1936,8 +1931,8 @@ pub const unsafe fn read_unaligned<T>(src: *const T) -> T {
 #[rustc_const_stable(feature = "const_ptr_write", since = "1.83.0")]
 #[rustc_diagnostic_item = "ptr_write"]
 #[track_caller]
-#[safety::precond::ValidPtr(dst, T, 1)]
-#[safety::precond::Align(dst, T)]
+// #[Precond_ValidPtr(dst, T, 1)]
+#[Precond_Align(dst, T)]
 pub const unsafe fn write<T>(dst: *mut T, src: T) {
     // Semantically, it would be fine for this to be implemented as a
     // `copy_nonoverlapping` and appropriate drop suppression of `src`.
