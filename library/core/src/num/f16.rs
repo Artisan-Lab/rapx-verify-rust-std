@@ -1405,6 +1405,7 @@ impl f16 {
 // Functions in this module fall into `core_float_math`
 // #[unstable(feature = "core_float_math", issue = "137578")]
 #[cfg(not(test))]
+#[doc(test(attr(feature(cfg_target_has_reliable_f16_f128), expect(internal_features))))]
 impl f16 {
     /// Returns the largest integer less than or equal to `self`.
     ///
@@ -1414,8 +1415,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1432,7 +1431,6 @@ impl f16 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f16", issue = "116909")]
     #[rustc_const_unstable(feature = "f16", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn floor(self) -> f16 {
         // SAFETY: intrinsic with no preconditions
@@ -1447,8 +1445,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1464,7 +1460,6 @@ impl f16 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f16", issue = "116909")]
     #[rustc_const_unstable(feature = "f16", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn ceil(self) -> f16 {
         // SAFETY: intrinsic with no preconditions
@@ -1480,8 +1475,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1502,7 +1495,6 @@ impl f16 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f16", issue = "116909")]
     #[rustc_const_unstable(feature = "f16", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn round(self) -> f16 {
         // SAFETY: intrinsic with no preconditions
@@ -1518,8 +1510,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1538,7 +1528,6 @@ impl f16 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f16", issue = "116909")]
     #[rustc_const_unstable(feature = "f16", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn round_ties_even(self) -> f16 {
         intrinsics::round_ties_even_f16(self)
@@ -1553,8 +1542,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1572,7 +1559,6 @@ impl f16 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f16", issue = "116909")]
     #[rustc_const_unstable(feature = "f16", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn trunc(self) -> f16 {
         // SAFETY: intrinsic with no preconditions
@@ -1587,8 +1573,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1605,7 +1589,6 @@ impl f16 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f16", issue = "116909")]
     #[rustc_const_unstable(feature = "f16", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn fract(self) -> f16 {
         self - self.trunc()
@@ -1629,8 +1612,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1677,8 +1658,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1722,8 +1701,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1762,8 +1739,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1797,8 +1772,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///
@@ -1835,8 +1808,6 @@ impl f16 {
     ///
     /// ```
     /// #![feature(f16)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f16_math)] {
     ///

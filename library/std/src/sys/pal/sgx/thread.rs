@@ -5,7 +5,7 @@ use super::unsupported;
 use crate::ffi::CStr;
 use crate::io;
 use crate::num::NonZero;
-use crate::time::Duration;
+use crate::time::{Duration, Instant};
 
 pub struct Thread(task_queue::JoinHandle);
 
@@ -96,7 +96,11 @@ pub mod wait_notify {
 
 impl Thread {
     // unsafe: see thread::Builder::spawn_unchecked for safety requirements
-    pub unsafe fn new(_stack: usize, p: Box<dyn FnOnce() + Send>) -> io::Result<Thread> {
+    pub unsafe fn new(
+        _stack: usize,
+        _name: Option<&str>,
+        p: Box<dyn FnOnce() + Send>,
+    ) -> io::Result<Thread> {
         let mut queue_lock = task_queue::lock();
         unsafe { usercalls::launch_thread()? };
         let (task, handle) = task_queue::Task::new(p);
@@ -130,6 +134,14 @@ impl Thread {
 
     pub fn sleep(dur: Duration) {
         usercalls::wait_timeout(0, dur, || true);
+    }
+
+    pub fn sleep_until(deadline: Instant) {
+        let now = Instant::now();
+
+        if let Some(delay) = deadline.checked_duration_since(now) {
+            Self::sleep(delay);
+        }
     }
 
     pub fn join(self) {

@@ -28,7 +28,8 @@
 //!   undefined behavior to perform two concurrent accesses to the same location from different
 //!   threads unless both accesses only read from memory. Notice that this explicitly
 //!   includes [`read_volatile`] and [`write_volatile`]: Volatile accesses cannot
-//!   be used for inter-thread synchronization.
+//!   be used for inter-thread synchronization, regardless of whether they are acting on
+//!   Rust memory or not.
 //! * The result of casting a reference to a pointer is valid for as long as the
 //!   underlying allocation is live and no reference (just raw pointers) is used to
 //!   access the same memory. That is, reference and pointer accesses cannot be
@@ -113,6 +114,10 @@
 //! case that an allocation always has a set of memory addresses which is
 //! fully contiguous (i.e., has no "holes"), there is no guarantee that this
 //! will not change in the future.
+//!
+//! Allocations must behave like "normal" memory: in particular, reads must not have
+//! side-effects, and writes must become visible to other threads using the usual synchronization
+//! primitives.
 //!
 //! For any allocation with `base` address, `size`, and a set of
 //! `addresses`, the following are guaranteed:
@@ -402,7 +407,7 @@ use crate::cmp::Ordering;
 use crate::intrinsics::const_eval_select;
 #[cfg(kani)]
 use crate::kani;
-use crate::marker::FnPtr;
+use crate::marker::{FnPtr, PointeeSized};
 use crate::mem::{self, MaybeUninit, SizedTypeProperties};
 use crate::num::NonZero;
 use crate::{fmt, hash, intrinsics, ub_checks};
@@ -811,7 +816,7 @@ pub const unsafe fn write_bytes<T>(dst: *mut T, val: u8, count: usize) {
 #[lang = "drop_in_place"]
 #[allow(unconditional_recursion)]
 #[rustc_diagnostic_item = "ptr_drop_in_place"]
-pub unsafe fn drop_in_place<T: ?Sized>(to_drop: *mut T) {
+pub unsafe fn drop_in_place<T: PointeeSized>(to_drop: *mut T) {
     // Code here does not matter - this is replaced by the
     // real drop glue by the compiler.
 
@@ -840,7 +845,7 @@ pub unsafe fn drop_in_place<T: ?Sized>(to_drop: *mut T) {
 #[rustc_promotable]
 #[rustc_const_stable(feature = "const_ptr_null", since = "1.24.0")]
 #[rustc_diagnostic_item = "ptr_null"]
-pub const fn null<T: ?Sized + Thin>() -> *const T {
+pub const fn null<T: PointeeSized + Thin>() -> *const T {
     from_raw_parts(without_provenance::<()>(0), ())
 }
 
@@ -865,7 +870,7 @@ pub const fn null<T: ?Sized + Thin>() -> *const T {
 #[rustc_promotable]
 #[rustc_const_stable(feature = "const_ptr_null", since = "1.24.0")]
 #[rustc_diagnostic_item = "ptr_null_mut"]
-pub const fn null_mut<T: ?Sized + Thin>() -> *mut T {
+pub const fn null_mut<T: PointeeSized + Thin>() -> *mut T {
     from_raw_parts_mut(without_provenance_mut::<()>(0), ())
 }
 
@@ -984,9 +989,10 @@ pub const fn dangling_mut<T>() -> *mut T {
 #[must_use]
 #[inline(always)]
 #[stable(feature = "exposed_provenance", since = "1.84.0")]
+#[rustc_const_unstable(feature = "const_exposed_provenance", issue = "144538")]
 #[cfg_attr(miri, track_caller)] // even without panics, this helps for Miri backtraces
 #[allow(fuzzy_provenance_casts)] // this *is* the explicit provenance API one should use instead
-pub fn with_exposed_provenance<T>(addr: usize) -> *const T {
+pub const fn with_exposed_provenance<T>(addr: usize) -> *const T {
     addr as *const T
 }
 
@@ -1024,9 +1030,10 @@ pub fn with_exposed_provenance<T>(addr: usize) -> *const T {
 #[must_use]
 #[inline(always)]
 #[stable(feature = "exposed_provenance", since = "1.84.0")]
+#[rustc_const_unstable(feature = "const_exposed_provenance", issue = "144538")]
 #[cfg_attr(miri, track_caller)] // even without panics, this helps for Miri backtraces
 #[allow(fuzzy_provenance_casts)] // this *is* the explicit provenance API one should use instead
-pub fn with_exposed_provenance_mut<T>(addr: usize) -> *mut T {
+pub const fn with_exposed_provenance_mut<T>(addr: usize) -> *mut T {
     addr as *mut T
 }
 
@@ -1083,7 +1090,7 @@ pub fn with_exposed_provenance_mut<T>(addr: usize) -> *mut T {
 #[rustc_const_stable(feature = "ptr_from_ref", since = "1.76.0")]
 #[rustc_never_returns_null_ptr]
 #[rustc_diagnostic_item = "ptr_from_ref"]
-pub const fn from_ref<T: ?Sized>(r: &T) -> *const T {
+pub const fn from_ref<T: PointeeSized>(r: &T) -> *const T {
     r
 }
 
@@ -1133,7 +1140,7 @@ pub const fn from_ref<T: ?Sized>(r: &T) -> *const T {
 #[stable(feature = "ptr_from_ref", since = "1.76.0")]
 #[rustc_const_stable(feature = "ptr_from_ref", since = "1.76.0")]
 #[rustc_never_returns_null_ptr]
-pub const fn from_mut<T: ?Sized>(r: &mut T) -> *mut T {
+pub const fn from_mut<T: PointeeSized>(r: &mut T) -> *mut T {
     r
 }
 
@@ -2048,53 +2055,60 @@ pub const unsafe fn write_unaligned<T>(dst: *mut T, src: T) {
     }
 }
 
-/// Performs a volatile read of the value from `src` without moving it. This
-/// leaves the memory in `src` unchanged.
+/// Performs a volatile read of the value from `src` without moving it.
 ///
-/// Volatile operations are intended to act on I/O memory, and are guaranteed
-/// to not be elided or reordered by the compiler across other volatile
-/// operations.
+/// Volatile operations are intended to act on I/O memory. As such, they are considered externally
+/// observable events (just like syscalls, but less opaque), and are guaranteed to not be elided or
+/// reordered by the compiler across other externally observable events. With this in mind, there
+/// are two cases of usage that need to be distinguished:
 ///
-/// # Notes
+/// - When a volatile operation is used for memory inside an [allocation], it behaves exactly like
+///   [`read`], except for the additional guarantee that it won't be elided or reordered (see
+///   above). This implies that the operation will actually access memory and not e.g. be lowered to
+///   reusing data from a previous read. Other than that, all the usual rules for memory accesses
+///   apply (including provenance).  In particular, just like in C, whether an operation is volatile
+///   has no bearing whatsoever on questions involving concurrent accesses from multiple threads.
+///   Volatile accesses behave exactly like non-atomic accesses in that regard.
 ///
-/// Rust does not currently have a rigorously and formally defined memory model,
-/// so the precise semantics of what "volatile" means here is subject to change
-/// over time. That being said, the semantics will almost always end up pretty
-/// similar to [C11's definition of volatile][c11].
+/// - Volatile operations, however, may also be used to access memory that is _outside_ of any Rust
+///   allocation. In this use-case, the pointer does *not* have to be [valid] for reads. This is
+///   typically used for CPU and peripheral registers that must be accessed via an I/O memory
+///   mapping, most commonly at fixed addresses reserved by the hardware. These often have special
+///   semantics associated to their manipulation, and cannot be used as general purpose memory.
+///   Here, any address value is possible, including 0 and [`usize::MAX`], so long as the semantics
+///   of such a read are well-defined by the target hardware. The provenance of the pointer is
+///   irrelevant, and it can be created with [`without_provenance`]. The access must not trap. It
+///   can cause side-effects, but those must not affect Rust-allocated memory in any way. This
+///   access is still not considered [atomic], and as such it cannot be used for inter-thread
+///   synchronization.
 ///
-/// The compiler shouldn't change the relative order or number of volatile
-/// memory operations. However, volatile memory operations on zero-sized types
-/// (e.g., if a zero-sized type is passed to `read_volatile`) are noops
-/// and may be ignored.
+/// Note that volatile memory operations where T is a zero-sized type are noops and may be ignored.
 ///
-/// [c11]: http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf
+/// [allocation]: crate::ptr#allocated-object
+/// [atomic]: crate::sync::atomic#memory-model-for-atomic-accesses
 ///
 /// # Safety
 ///
+/// Like [`read`], `read_volatile` creates a bitwise copy of `T`, regardless of whether `T` is
+/// [`Copy`]. If `T` is not [`Copy`], using both the returned value and the value at `*src` can
+/// [violate memory safety][read-ownership]. However, storing non-[`Copy`] types in volatile memory
+/// is almost certainly incorrect.
+///
 /// Behavior is undefined if any of the following conditions are violated:
 ///
-/// * `src` must be [valid] for reads.
+/// * `src` must be either [valid] for reads, or it must point to memory outside of all Rust
+///   allocations and reading from that memory must:
+///   - not trap, and
+///   - not cause any memory inside a Rust allocation to be modified.
 ///
 /// * `src` must be properly aligned.
 ///
-/// * `src` must point to a properly initialized value of type `T`.
-///
-/// Like [`read`], `read_volatile` creates a bitwise copy of `T`, regardless of
-/// whether `T` is [`Copy`]. If `T` is not [`Copy`], using both the returned
-/// value and the value at `*src` can [violate memory safety][read-ownership].
-/// However, storing non-[`Copy`] types in volatile memory is almost certainly
-/// incorrect.
+/// * Reading from `src` must produce a properly initialized value of type `T`.
 ///
 /// Note that even if `T` has size `0`, the pointer must be properly aligned.
 ///
 /// [valid]: self#safety
 /// [read-ownership]: read#ownership-of-the-returned-value
-///
-/// Just like in C, whether an operation is volatile has no bearing whatsoever
-/// on questions involving concurrent access from multiple threads. Volatile
-/// accesses behave exactly like non-atomic accesses in that regard. In particular,
-/// a race between a `read_volatile` and any write operation to the same location
-/// is undefined behavior.
 ///
 /// # Examples
 ///
@@ -2118,62 +2132,69 @@ pub unsafe fn read_volatile<T>(src: *const T) -> T {
     unsafe {
         ub_checks::assert_unsafe_precondition!(
             check_language_ub,
-            "ptr::read_volatile requires that the pointer argument is aligned and non-null",
+            "ptr::read_volatile requires that the pointer argument is aligned",
             (
                 addr: *const () = src as *const (),
                 align: usize = align_of::<T>(),
-                is_zst: bool = T::IS_ZST,
-            ) => ub_checks::maybe_is_aligned_and_not_null(addr, align, is_zst)
+            ) => ub_checks::maybe_is_aligned(addr, align)
         );
         intrinsics::volatile_load(src)
     }
 }
 
-/// Performs a volatile write of a memory location with the given value without
-/// reading or dropping the old value.
+/// Performs a volatile write of a memory location with the given value without reading or dropping
+/// the old value.
 ///
-/// Volatile operations are intended to act on I/O memory, and are guaranteed
-/// to not be elided or reordered by the compiler across other volatile
-/// operations.
+/// Volatile operations are intended to act on I/O memory. As such, they are considered externally
+/// observable events (just like syscalls), and are guaranteed to not be elided or reordered by the
+/// compiler across other externally observable events. With this in mind, there are two cases of
+/// usage that need to be distinguished:
 ///
-/// `write_volatile` does not drop the contents of `dst`. This is safe, but it
-/// could leak allocations or resources, so care should be taken not to overwrite
-/// an object that should be dropped.
+/// - When a volatile operation is used for memory inside an [allocation], it behaves exactly like
+///   [`write`][write()], except for the additional guarantee that it won't be elided or reordered
+///   (see above). This implies that the operation will actually access memory and not e.g. be
+///   lowered to a register access. Other than that, all the usual rules for memory accesses apply
+///   (including provenance). In particular, just like in C, whether an operation is volatile has no
+///   bearing whatsoever on questions involving concurrent access from multiple threads. Volatile
+///   accesses behave exactly like non-atomic accesses in that regard.
 ///
-/// Additionally, it does not drop `src`. Semantically, `src` is moved into the
-/// location pointed to by `dst`.
+/// - Volatile operations, however, may also be used to access memory that is _outside_ of any Rust
+///   allocation. In this use-case, the pointer does *not* have to be [valid] for writes. This is
+///   typically used for CPU and peripheral registers that must be accessed via an I/O memory
+///   mapping, most commonly at fixed addresses reserved by the hardware. These often have special
+///   semantics associated to their manipulation, and cannot be used as general purpose memory.
+///   Here, any address value is possible, including 0 and [`usize::MAX`], so long as the semantics
+///   of such a write are well-defined by the target hardware. The provenance of the pointer is
+///   irrelevant, and it can be created with [`without_provenance`]. The access must not trap. It
+///   can cause side-effects, but those must not affect Rust-allocated memory in any way. This
+///   access is still not considered [atomic], and as such it cannot be used for inter-thread
+///   synchronization.
 ///
-/// # Notes
+/// Note that volatile memory operations on zero-sized types (e.g., if a zero-sized type is passed
+/// to `write_volatile`) are noops and may be ignored.
 ///
-/// Rust does not currently have a rigorously and formally defined memory model,
-/// so the precise semantics of what "volatile" means here is subject to change
-/// over time. That being said, the semantics will almost always end up pretty
-/// similar to [C11's definition of volatile][c11].
+/// `write_volatile` does not drop the contents of `dst`. This is safe, but it could leak
+/// allocations or resources, so care should be taken not to overwrite an object that should be
+/// dropped when operating on Rust memory. Additionally, it does not drop `src`. Semantically, `src`
+/// is moved into the location pointed to by `dst`.
 ///
-/// The compiler shouldn't change the relative order or number of volatile
-/// memory operations. However, volatile memory operations on zero-sized types
-/// (e.g., if a zero-sized type is passed to `write_volatile`) are noops
-/// and may be ignored.
-///
-/// [c11]: http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf
+/// [allocation]: crate::ptr#allocated-object
+/// [atomic]: crate::sync::atomic#memory-model-for-atomic-accesses
 ///
 /// # Safety
 ///
 /// Behavior is undefined if any of the following conditions are violated:
 ///
-/// * `dst` must be [valid] for writes.
+/// * `dst` must be either [valid] for writes, or it must point to memory outside of all Rust
+///   allocations and writing to that memory must:
+///   - not trap, and
+///   - not cause any memory inside a Rust allocation to be modified.
 ///
 /// * `dst` must be properly aligned.
 ///
 /// Note that even if `T` has size `0`, the pointer must be properly aligned.
 ///
 /// [valid]: self#safety
-///
-/// Just like in C, whether an operation is volatile has no bearing whatsoever
-/// on questions involving concurrent access from multiple threads. Volatile
-/// accesses behave exactly like non-atomic accesses in that regard. In particular,
-/// a race between a `write_volatile` and any other operation (reading or writing)
-/// on the same location is undefined behavior.
 ///
 /// # Examples
 ///
@@ -2199,12 +2220,11 @@ pub unsafe fn write_volatile<T>(dst: *mut T, src: T) {
     unsafe {
         ub_checks::assert_unsafe_precondition!(
             check_language_ub,
-            "ptr::write_volatile requires that the pointer argument is aligned and non-null",
+            "ptr::write_volatile requires that the pointer argument is aligned",
             (
                 addr: *mut () = dst as *mut (),
                 align: usize = align_of::<T>(),
-                is_zst: bool = T::IS_ZST,
-            ) => ub_checks::maybe_is_aligned_and_not_null(addr, align, is_zst)
+            ) => ub_checks::maybe_is_aligned(addr, align)
         );
         intrinsics::volatile_store(dst, src);
     }
@@ -2489,7 +2509,7 @@ pub(crate) unsafe fn align_offset<T: Sized>(p: *const T, a: usize) -> usize {
 #[must_use = "pointer comparison produces a value"]
 #[rustc_diagnostic_item = "ptr_eq"]
 #[allow(ambiguous_wide_pointer_comparisons)] // it's actually clear here
-pub fn eq<T: ?Sized>(a: *const T, b: *const T) -> bool {
+pub fn eq<T: PointeeSized>(a: *const T, b: *const T) -> bool {
     a == b
 }
 
@@ -2513,7 +2533,7 @@ pub fn eq<T: ?Sized>(a: *const T, b: *const T) -> bool {
 #[stable(feature = "ptr_addr_eq", since = "1.76.0")]
 #[inline(always)]
 #[must_use = "pointer comparison produces a value"]
-pub fn addr_eq<T: ?Sized, U: ?Sized>(p: *const T, q: *const U) -> bool {
+pub fn addr_eq<T: PointeeSized, U: PointeeSized>(p: *const T, q: *const U) -> bool {
     (p as *const ()) == (q as *const ())
 }
 
@@ -2596,7 +2616,7 @@ pub fn fn_addr_eq<T: FnPtr, U: FnPtr>(f: T, g: U) -> bool {
 /// assert_eq!(actual, expected);
 /// ```
 #[stable(feature = "ptr_hash", since = "1.35.0")]
-pub fn hash<T: ?Sized, S: hash::Hasher>(hashee: *const T, into: &mut S) {
+pub fn hash<T: PointeeSized, S: hash::Hasher>(hashee: *const T, into: &mut S) {
     use crate::hash::Hash;
     hashee.hash(into);
 }

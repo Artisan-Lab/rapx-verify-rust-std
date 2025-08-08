@@ -1430,6 +1430,7 @@ impl f128 {
 // due to https://github.com/llvm/llvm-project/issues/44744. aarch64 linux matches this.
 // #[unstable(feature = "core_float_math", issue = "137578")]
 #[cfg(not(test))]
+#[doc(test(attr(feature(cfg_target_has_reliable_f16_f128), expect(internal_features))))]
 impl f128 {
     /// Returns the largest integer less than or equal to `self`.
     ///
@@ -1439,8 +1440,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///
@@ -1457,7 +1456,6 @@ impl f128 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f128", issue = "116909")]
     #[rustc_const_unstable(feature = "f128", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn floor(self) -> f128 {
         // SAFETY: intrinsic with no preconditions
@@ -1472,8 +1470,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///
@@ -1489,7 +1485,6 @@ impl f128 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f128", issue = "116909")]
     #[rustc_const_unstable(feature = "f128", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn ceil(self) -> f128 {
         // SAFETY: intrinsic with no preconditions
@@ -1505,8 +1500,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///
@@ -1527,7 +1520,6 @@ impl f128 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f128", issue = "116909")]
     #[rustc_const_unstable(feature = "f128", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn round(self) -> f128 {
         // SAFETY: intrinsic with no preconditions
@@ -1543,8 +1535,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///
@@ -1563,7 +1553,6 @@ impl f128 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f128", issue = "116909")]
     #[rustc_const_unstable(feature = "f128", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn round_ties_even(self) -> f128 {
         intrinsics::round_ties_even_f128(self)
@@ -1578,8 +1567,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///
@@ -1597,7 +1584,6 @@ impl f128 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f128", issue = "116909")]
     #[rustc_const_unstable(feature = "f128", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn trunc(self) -> f128 {
         // SAFETY: intrinsic with no preconditions
@@ -1612,8 +1598,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///
@@ -1630,7 +1614,6 @@ impl f128 {
     #[rustc_allow_incoherent_impl]
     #[unstable(feature = "f128", issue = "116909")]
     #[rustc_const_unstable(feature = "f128", issue = "116909")]
-    // #[rustc_const_unstable(feature = "const_float_round_methods", issue = "141555")]
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub const fn fract(self) -> f128 {
         self - self.trunc()
@@ -1654,8 +1637,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///
@@ -1702,8 +1683,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///
@@ -1747,8 +1726,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///
@@ -1787,8 +1764,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///
@@ -1822,8 +1797,6 @@ impl f128 {
     ///
     /// ```
     /// #![feature(f128)]
-    /// # #![feature(cfg_target_has_reliable_f16_f128)]
-    /// # #![expect(internal_features)]
     /// # #[cfg(not(miri))]
     /// # #[cfg(target_has_reliable_f128_math)] {
     ///

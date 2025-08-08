@@ -235,12 +235,7 @@
     test(attr(allow(dead_code, deprecated, unused_variables, unused_mut)))
 )]
 #![doc(rust_logo)]
-#![doc(cfg_hide(
-    not(test),
-    not(any(test, bootstrap)),
-    no_global_oom_handling,
-    not(no_global_oom_handling)
-))]
+#![doc(cfg_hide(not(test), no_global_oom_handling, not(no_global_oom_handling)))]
 // Don't link to std. We are std.
 #![no_std]
 // Tell the compiler to link to either panic_abort or panic_unwind
@@ -277,17 +272,16 @@
 // tidy-alphabetical-start
 
 // stabilization was reverted after it hit beta
-#![cfg_attr(not(bootstrap), feature(autodiff))]
 #![feature(alloc_error_handler)]
 #![feature(allocator_internals)]
 #![feature(allow_internal_unsafe)]
 #![feature(allow_internal_unstable)]
 #![feature(asm_experimental_arch)]
+#![feature(autodiff)]
 #![feature(cfg_sanitizer_cfi)]
 #![feature(cfg_target_thread_local)]
 #![feature(cfi_encoding)]
 #![feature(char_max_len)]
-#![feature(concat_idents)]
 #![feature(core_float_math)]
 #![feature(decl_macro)]
 #![feature(deprecated_suggestion)]
@@ -297,10 +291,12 @@
 #![feature(doc_notable_trait)]
 #![feature(dropck_eyepatch)]
 #![feature(extended_varargs_abi_support)]
-#![feature(f128)]
 #![feature(f16)]
+#![feature(f128)]
 #![feature(ffi_const)]
 #![feature(formatting_options)]
+#![feature(hash_map_internals)]
+#![feature(hash_map_macro)]
 #![feature(if_let_guard)]
 #![feature(intra_doc_pointers)]
 #![feature(iter_advance_by)]
@@ -331,14 +327,13 @@
 //
 // Library features (core):
 // tidy-alphabetical-start
-#![feature(array_chunks)]
 #![feature(bstr)]
 #![feature(bstr_internals)]
 #![feature(char_internals)]
 #![feature(clone_to_uninit)]
-#![feature(const_float_round_methods)]
 #![feature(core_intrinsics)]
 #![feature(core_io_borrowed_buf)]
+#![feature(drop_guard)]
 #![feature(duration_constants)]
 #![feature(error_generic_member_access)]
 #![feature(error_iter)]
@@ -357,7 +352,6 @@
 #![feature(lazy_get)]
 #![feature(maybe_uninit_slice)]
 #![feature(maybe_uninit_write_slice)]
-#![feature(nonnull_provenance)]
 #![feature(panic_can_unwind)]
 #![feature(panic_internals)]
 #![feature(pin_coerce_unsized_trait)]
@@ -642,7 +636,6 @@ pub mod simd {
 }
 
 #[unstable(feature = "autodiff", issue = "124509")]
-#[cfg(not(bootstrap))]
 /// This module provides support for automatic differentiation.
 pub mod autodiff {
     /// This macro handles automatic differentiation.
@@ -725,10 +718,9 @@ pub use core::primitive;
 pub use core::todo;
 // Re-export built-in macros defined through core.
 #[stable(feature = "builtin_macro_prelude", since = "1.38.0")]
-#[allow(deprecated)]
 pub use core::{
-    assert, assert_matches, cfg, column, compile_error, concat, concat_idents, const_format_args,
-    env, file, format_args, format_args_nl, include, include_bytes, include_str, line, log_syntax,
+    assert, assert_matches, cfg, column, compile_error, concat, const_format_args, env, file,
+    format_args, format_args_nl, include, include_bytes, include_str, line, log_syntax,
     module_path, option_env, stringify, trace_macros,
 };
 // Re-export macros defined in core.
