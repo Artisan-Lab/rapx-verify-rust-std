@@ -6,8 +6,8 @@
 
 #![stable(feature = "rust1", since = "1.0.0")]
 
-use safety_tool_macro::*;
 use safety::{ensures, requires};
+use safety_tool_macro::*;
 
 use crate::cmp::Ordering::{self, Equal, Greater, Less};
 use crate::intrinsics::{exact_div, unchecked_sub};
