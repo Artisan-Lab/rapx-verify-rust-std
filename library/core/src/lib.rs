@@ -386,6 +386,11 @@ pub mod primitive;
 #[cfg(kani)]
 kani_core::kani_lib!(core);
 
+#[cfg(rapx)]
+mod rapx_macro {
+    pub use safety_macro::safety;
+}
+
 // Pull in the `core_arch` crate directly into core. The contents of
 // `core_arch` are in a different repository: rust-lang/stdarch.
 //

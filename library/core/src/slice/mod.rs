@@ -16,6 +16,8 @@ use crate::mem::{self, MaybeUninit, SizedTypeProperties};
 use crate::num::NonZero;
 use crate::ops::{OneSidedRange, OneSidedRangeBound, Range, RangeBounds, RangeInclusive};
 use crate::panic::const_panic;
+#[cfg(rapx)]
+use crate::rapx_macro::safety;
 use crate::simd::{self, Simd};
 use crate::ub_checks::assert_unsafe_precondition;
 use crate::{fmt, hint, ptr, range, slice};
@@ -638,6 +640,7 @@ impl<T> [T] {
     #[must_use]
     #[track_caller]
     #[rustc_const_unstable(feature = "const_index", issue = "143775")]
+    #[cfg_attr(rapx, safety {})]
     pub const unsafe fn get_unchecked<I>(&self, index: I) -> &I::Output
     where
         I: [const] SliceIndex<Self>,
